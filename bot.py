@@ -107,7 +107,8 @@ async def get_song(update: Update, context: CallbackContext) -> None:
 def error(update: Update, context: CallbackContext) -> None:
     logger.warning(f"Update {update} caused error {context.error}")
 
-def main():
+# Main async function to start the bot
+async def main():
     # Set up the Application for the Telegram bot (use Application instead of Updater)
     global application
     application = Application.builder().token(TELEGRAM_API_TOKEN).build()
@@ -119,8 +120,8 @@ def main():
     # Error Handler
     application.add_error_handler(error)
 
-    # Set up the webhook for Flask
-    application.bot.set_webhook(url=f'https://web-38h7.onrender.com/{TELEGRAM_API_TOKEN}')
+    # Set up the webhook for Flask (await the set_webhook call)
+    await application.bot.set_webhook(url=f'https://web-38h7.onrender.com/{TELEGRAM_API_TOKEN}')
 
     # Start the Flask app
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
@@ -128,4 +129,7 @@ def main():
 if __name__ == '__main__':
     # Start a background thread to process the queue
     threading.Thread(target=process_queue, daemon=True).start()
-    main()
+
+    # Run the main function using asyncio event loop
+    import asyncio
+    asyncio.run(main())
