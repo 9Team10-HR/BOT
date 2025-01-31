@@ -3,7 +3,7 @@ import os
 import queue
 import threading
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, CallbackContext
 from pytube import YouTube
 import ffmpeg
 from flask import Flask, request
@@ -76,8 +76,8 @@ app = Flask(__name__)
 
 @app.route(f'/{TELEGRAM_API_TOKEN}', methods=['POST'])
 def webhook():
-    update = Update.de_json(request.get_json(), updater.bot)
-    dispatcher.process_update(update)
+    update = Update.de_json(request.get_json(), application.bot)
+    application.process_update(update)
     return 'OK', 200
 
 @app.route('/')
@@ -85,43 +85,42 @@ def index():
     return "Hello, this is your Music Bot!"
 
 # Start command for the bot
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Welcome to the Music Bot! Just send the name of the song you want to listen to.")
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text("Welcome to the Music Bot! Just send the name of the song you want to listen to.")
 
 # Function to handle song requests
-def get_song(update: Update, context: CallbackContext) -> None:
+async def get_song(update: Update, context: CallbackContext) -> None:
     query = ' '.join(context.args)
     
     if not query:
-        update.message.reply_text("Please provide a song name. Example: /play Never Gonna Give You Up")
+        await update.message.reply_text("Please provide a song name. Example: /play Never Gonna Give You Up")
         return
     
-    update.message.reply_text(f"Searching for {query}...")
+    await update.message.reply_text(f"Searching for {query}...")
 
     # Add the song request to the queue
     song_queue.put({'song_name': query, 'user_id': update.message.chat_id, 'context': context})
 
-    update.message.reply_text(f"Your song request for '{query}' has been added to the queue. Please wait...")
+    await update.message.reply_text(f"Your song request for '{query}' has been added to the queue. Please wait...")
 
 # Error handler
 def error(update: Update, context: CallbackContext) -> None:
     logger.warning(f"Update {update} caused error {context.error}")
 
 def main():
-    # Set up the Updater and Dispatcher for the Telegram bot
-    global updater, dispatcher
-    updater = Updater(TELEGRAM_API_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+    # Set up the Application for the Telegram bot (use Application instead of Updater)
+    global application
+    application = Application.builder().token(TELEGRAM_API_TOKEN).build()
 
     # Command Handlers for Telegram Bot
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("play", get_song))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("play", get_song))
 
     # Error Handler
-    dispatcher.add_error_handler(error)
+    application.add_error_handler(error)
 
     # Set up the webhook for Flask
-    updater.bot.set_webhook(url=f'https://web-38h7.onrender.com/{TELEGRAM_API_TOKEN}')
+    application.bot.set_webhook(url=f'https://web-38h7.onrender.com/{TELEGRAM_API_TOKEN}')
 
     # Start the Flask app
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
