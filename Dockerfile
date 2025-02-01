@@ -8,4 +8,4 @@ COPY . /app/
 WORKDIR /app/
 
 RUN pip3 install -r requirements.txt --force-reinstall
-CMD python3 -m RishuMusic
+CMD python3 -m HRMusic
